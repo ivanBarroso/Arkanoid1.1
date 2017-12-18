@@ -1,2 +1,2 @@
 # Arkanoid1.1
-Version de Arkanoid sin PO de desarrollo de interfaces 
+Version de Arkanoid sin PO de desarrollo de interfaces
