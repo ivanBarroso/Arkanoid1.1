@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Arkanoid</title>
+
+<noscript>Lo siento es necesario un navegador con javascript para poder ejecutar todo el contenido</noscript>
+<style>
+body
+{
+  margin: auto;
+}
+#contenedor
+{
+    background-color: #000000;
+    margin: auto;
+    float: left;
+    position: relative;
+
+}
+#informacion
+{
+    position: relative;
+    float: left;
+    background-color: #dab92a;
+}
+#debug
+{
+    background-color: #e1d1fe;
+    margin: 7px;
+    float: left;
+}
+span
+{
+    font-size: 20px;
+}
+</style>
+
+</head>
+<body>
+    <div id="contenedor"></div>
+    <div id="informacion">
+      <div id="debug">
+        <span>Raton X:</span><br />
+        <span>Raton Y:</span><br />
+        <span>Dir. X:</span><br />
+        <span>Dir. Y:</span><br />
+        <span>puntuacion: </span><br />
+        <span>Vidas:</span><br />
+        <span>Distancia bola a base:</span><br />
+        <span>centx pelota:</span><br />
+        <span>cenx base:</span><br />
+      </div>
+    <div id="debug">
+        <span id="posicionX"></span><br />
+        <span id="posicionY"></span><br />
+        <span id="direccionX"></span><br />
+        <span id="direccionY"></span><br />
+        <span id="puntuacion"></span><br />
+        <span id="vidas"></span><br />
+        <span id="distancia"></span><br />
+        <span id="cenxpelota"></span><br />
+        <span id="cenxbase"></span><br />
+      </div>
+    </div>
+    <audio id="sonidoBeep">
+      <source src="beep.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sonidoFondo">
+      <source src="fondo.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sonidoFin">
+      <source src="fin.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="perderVida">
+      <source src="perderVida.mp3" type="audio/mpeg">
+    </audio>
+</body>
+
+<script type="text/javascript">
+
+//Juego iniciado
+var juegoIniciado = false;
+
+//Nivel del juego
+var nivelActual = 0;
+var NUMERO_LADRILLOS_FILA = 11;
+
+//puntuacion y vidas
+  var puntuacion = 0;
+  var vidas = 0;
+
+//Configuracion de movimientos
+  var ultimoPasoX = 0;
+  var ultimoPasoY = 0;
+  var pasoBarra = 40;
+  var velocidad = 10;
+  var intervaloCalculado = 30;
+  var derechaX = true;
+  var arribaY = true;
+  var estaEnMovimiento = false;
+  var intervalo = null;
+
+  var pasoXPelota = 1;
+  var pasoYPelota = 1;
+  
+
+  //Configuracion entorno, 
+  var anchoLargoBola = 25;
+  var radioBola = anchoLargoBola / 2;
+
+  //Borde de ambas cajas
+  var bordeCajas = 15;
+
+  //Caja del arkanoid
+  var anchoCajaJuego = 600;
+  var altoCajaJuego = 700;
+  
+  //Panel lateral con informacion
+  var anchoCajaInformacion = 300;
+  var altoCajaInformacion = altoCajaJuego;
+
+  //Ladrillos
+  var altoLadrillo = 40;
+  var anchoLadrillo = 45;
+
+  //Variables de la base
+  var anchobase = 120;
+  var altobase = 25;
+
+
+
+window.onload = function()
+{
+  //Sonidos del juego
+  audioFondo = document.getElementById("sonidoFondo"); 
+  audioBeep = document.getElementById("sonidoBeep"); 
+  audioFin = document.getElementById("sonidoFin"); 
+  audioPerderVida = document.getElementById("perderVida"); 
+
+
+  
+  //contenedor de la pelota
+  contenedorPelota = document.getElementById("contenedor");
+  contenedorPelota.style.width = anchoCajaJuego + "px";
+  contenedorPelota.style.height = altoCajaJuego + "px";
+  contenedorPelota.style.border = "solid " + bordeCajas + "px" + " #654321" ; 
+  contenedorPelota.style.backgroundImage="url('fondo.jpg')";
+
+
+  //Div informacion
+  contenedorInformacion = document.getElementById("informacion");
+  contenedorInformacion.style.width = anchoCajaInformacion + "px";
+  contenedorInformacion.style.height = altoCajaInformacion + "px";
+  contenedorInformacion.style.border = "solid " + bordeCajas +"px" + " yellow" ;
+
+  //Array con los colores de ladrillos
+  //                  blanco      azul claro  rosa       rojo        verde      gris
+  colores = new Array("#ffffff", "#41f1ef", "#f607ff", "#ff0000", "#6dff3d", "#c4c4c4");
+
+  //Array con los niveles 
+  niveles = new Array();
+
+  //Array nivel 0
+  nivel0 = new Array(
+    [-1,-1, 0,-1,-1,-1,-1,-1, 0,-1,-1],
+    [ 0,-1,-1, 0,-1,-1,-1, 0,-1,-1, 0],
+    [ 0,-1, 0, 0, 0, 0, 0, 0, 0,-1, 0],
+    [ 0, 0, 0,-1, 0, 0, 0,-1, 0, 0, 0],
+    [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [-1, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1],
+    [-1,-1, 0,-1,-1,-1,-1,-1, 0,-1,-1],
+    [-1, 0,-1,-1,-1,-1,-1,-1,-1, 0,-1],
+
+  );
+  niveles.push(nivel0);
+
+  //Array nivel 1
+  nivel1 = new Array(
+    [-1,-1,-1,-1, 1, 1, 1,-1,-1,-1,-1],
+    [-1,-1,-1, 1, 1, 1, 1, 1,-1,-1,-1],
+    [-1,-1, 1,-1,-1, 1,-1,-1, 1,-1,-1],
+    [-1,-1, 1, 1, 1, 1, 1, 1, 1,-1,-1],
+    [-1, 1, 1, 1, 1, 1, 1, 1, 1, 1,-1],
+    [-1, 1, 1,-1, 1, 1, 1,-1, 1, 1,-1],
+    [-1,-1, 1,-1, 1, 1, 1,-1, 1,-1,-1],
+    [-1,-1, 1,-1, 1,-1, 1,-1, 1,-1,-1],
+);
+  niveles.push(nivel1);
+
+  nivel2 = new Array(
+    [-1,-1, 2,-1,-1,-1,-1,-1, 2,-1,-1],
+    [-1,-1, 2,-1,-1,-1,-1,-1, 2,-1,-1],
+    [-1,-1, 2,-1,-1, 2,-1,-1, 2,-1,-1],
+    [-1,-1,-1, 2, 2, 2, 2, 2,-1,-1,-1],
+    [-1, 2, 2, 2, 2, 2, 2, 2, 2, 2,-1],
+    [ 2,-1, 2,-1,-1, 2,-1,-1, 2,-1, 2],
+    [ 2,-1,-1, 2, 2, 2, 2, 2,-1,-1, 2],
+    [-1,-1,-1,-1, 2, 2, 2,-1,-1,-1,-1],
+  );
+  niveles.push(nivel2);
+
+  nivel3 = new Array(
+    [-1, 3,-1,-1,-1,-1,-1,-1,-1, 3,-1],
+    [-1,-1, 3, 3, 3, 3, 3, 3, 3,-1,-1],
+    [-1, 3, 3, 3, 3, 3, 3, 3, 3, 3,-1],
+    [-1, 3,-1,-1, 3, 3, 3,-1,-1, 3,-1],
+    [ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+    [ 3, 3,-1, 3, 3,-1, 3, 3,-1, 3, 3],
+    [ 3,-1,-1,-1, 3,-1, 3,-1,-1,-1, 3],
+    [-1, 3,-1, 3,-1,-1,-1, 3,-1, 3,-1],
+  );
+    niveles.push(nivel3);
+
+  nivel4 = new Array(
+    [-1,-1, 2,-1,-1,-1,-1,-1, 2,-1,-1],  
+    [-1,-1,-1, 2,-1,-1,-1, 2,-1,-1,-1],
+    [-1,-1, 2, 2, 2, 2, 2, 2, 2,-1,-1],
+    [-1, 2, 2, 3, 2, 2, 2, 3, 2, 2,-1],
+    [ 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+    [ 2,-1, 2, 2, 2, 2, 2, 2, 2,-1, 2],
+    [ 2,-1, 2,-1,-1,-1,-1,-1, 2,-1, 2],
+    [-1,-1,-1, 2, 2,-1, 2, 2,-1,-1,-1],
+  );
+  niveles.push(nivel4);
+
+  nivel5 = new Array(
+    [ 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0],  
+    [ 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0],  
+    [ 0, 0, 3, 3, 3, 3, 3, 3, 3, 0, 0],
+    [ 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 0],
+    [ 0, 3, 0, 0, 3, 3, 3, 0, 0, 3, 0],
+    [ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+    [ 3, 0, 3, 0, 3, 3, 3, 0, 3, 0, 3],
+    [ 0, 0, 3, 0, 0, 3, 0, 0, 3, 0, 0],
+
+  );
+  niveles.push(nivel5);
+  nivel6 = new Array(
+    [-1,-1, 4,-1,-1,-1,-1,-1, 4,-1,-1],  
+    [-1,-1,-1, 4,-1,-1,-1, 4,-1,-1,-1],
+    [-1,-1, 4, 4, 4, 4, 4, 4, 4,-1,-1],
+    [-1, 3, 3,-1, 3, 3, 3,-1, 3, 3,-1],
+    [ 4, 4, 3, 3, 3, 4, 3, 3, 3, 4, 4],
+    [ 4,-1, 4, 4, 4, 4, 4, 4, 4,-1, 4],
+    [ 4,-1, 4,-1,-1,-1,-1,-1, 4,-1, 4],
+    [ 5, 5, 5, 4, 4, 5, 4, 4, 5, 5, 5],
+  );
+  niveles.push(nivel6);
+
+  arrayTamanioNivelBola = new Array(25,15,35,40,30,25,10,20);
+  //span que muestran los datos de la pelota
+  spPosicionX = document.getElementById("posicionX");
+  spdireccionX = document.getElementById("direccionX");
+  spPosicionY = document.getElementById("posicionY")
+  spPuntuacion = document.getElementById("puntuacion");
+  spdireccionY = document.getElementById("direccionY");
+  spVidas = document.getElementById("vidas");
+  spratonY = document.getElementById("ratonY");
+  distancia = document.getElementById("distancia");
+  cenxpelota = document.getElementById("cenxpelota");
+  cenxbase = document.getElementById("cenxbase");
+
+  //Creamos la base 
+  base = crearBase();
+
+  //Creamos la pelota
+  pelota = crearPelota(); 
+
+  //Eventos que controlamos
+  document.onmousemove = comprobarRaton;
+	document.onkeypress = comprobarTecla;
+  contenedorPelota.onclick = comprobarClick;
+
+  //Lista de ladrillos
+  ladrillos = document.getElementsByClassName("ladrillo");
+
+  //pintamos el nivel 0
+  pintarNivel(nivelActual);
+}
+
+function pintarNivel(nivelActual)
+{
+
+  //Creamos los ladrillos en el nivel actual
+    clearInterval(intervalo);
+
+
+    juegoIniciado = false;
+    pasoXPelota = 2;
+    pasoYPelota = 2;
+    intervaloCalculado = parseInt((Math.sqrt(Math.pow(pasoXPelota, 2) + Math.pow(pasoYPelota, 2))) * 3.0);
+    //actualizarIntervalo(intervaloCalculado);
+    
+    if(nivelActual == 0)
+    {
+      borrarLadrillos()
+      vidas = 3;
+      puntuacion = 0;
+      spPuntuacion.innerHTML = puntuacion;
+      spVidas.innerHTML = vidas;
+    }
+    crearLadrillos(nivelActual);
+
+
+    //actualizo el numero de ladrillos que existen
+    ladrillos = document.getElementsByClassName("ladrillo");
+    while( parseInt(pelota.style.top) != parseInt(base.style.top) - anchoLargoBola)
+    {
+      pelota.style.top = parseInt(base.style.top) - anchoLargoBola + "px";
+	    pelota.style.left = parseInt(base.style.left) + (anchobase/ 2) - (anchoLargoBola/2) + "px";
+    } 
+}
+
+function crearPelota()
+{
+	pelota = document.createElement("div");
+	pelota.style.width = anchoLargoBola + "px";
+	pelota.style.height = anchoLargoBola + "px";
+	pelota.style.borderRadius = "50px";
+	pelota.style.backgroundColor ="#42d1f4";
+  pelota.style.position = "absolute";
+	pelota.style.top = parseInt(base.style.top) - anchoLargoBola + "px";
+	pelota.style.left = parseInt(base.style.left) + (anchobase/ 2) - (anchoLargoBola/2) + "px";
+	contenedorPelota.appendChild(pelota);
+	return pelota;
+}
+
+function crearLadrillos(nivelActual)
+{
+  posicionY = 9;
+  posicionX = 9;
+  nivelAPintar = niveles[nivelActual];
+  for (var i = 0; i < nivelAPintar.length; i++) 
+  {
+    for (var j = 0; j < NUMERO_LADRILLOS_FILA; j++) 
+    {
+        ladrillo = document.createElement("div");
+        ladrillo.style.width = anchoLadrillo + "px";
+        ladrillo.style.height = altoLadrillo + "px";
+        ladrillo.style.position = "absolute";
+        
+
+        ladrillo.style.left = posicionX + "px";
+        ladrillo.style.top = posicionY + "px";
+
+        posicionX += anchoLadrillo + 9;
+        if(posicionX > anchoCajaJuego)
+        {
+          posicionY += altoLadrillo + 9;
+          posicionX = 9;
+        }
+        
+        ladrillo.style.backgroundColor = colores[nivelAPintar[i][j]];
+
+      if(nivelAPintar[i][j] >= 0)
+      {
+        ladrillo.className = "ladrillo";
+        
+        ladrillo.vida = (colores.indexOf(colores[nivelAPintar[i][j]]));
+      }
+        contenedorPelota.appendChild(ladrillo);
+    }
+  }
+}
+
+function comprobarTecla(elEvento)
+{
+	var evento = window.event || elEvento;
+
+	if(evento.charCode == 32)
+	{
+    if(!juegoIniciado)
+    {
+      juegoIniciado = true;
+      playAudio(audioFondo);
+      estaEnMovimiento = true;
+      intervalo = setInterval(function(){mover(pelota)}, intervaloCalculado);
+      
+    }
+	}
+      switch (evento.keyCode){
+        //flecha izquierda
+        
+        case 37:
+          base.style.left = parseInt(base.style.left) - pasoBarra + "px";
+          if(!estaEnMovimiento)
+          {
+            ponerEncimaCentroBase(pelota);
+          }
+
+          //PONER TOPES
+          
+        break;
+        //flecha derecha
+        case 39:
+          base.style.left = parseInt(base.style.left) + pasoBarra + "px";
+          if(!estaEnMovimiento)
+          {
+            ponerEncimaCentroBase(pelota);
+          }
+          // PONER TOPES
+      }
+	  
+
+  
+  if (String.fromCharCode(evento.charCode) == "p")
+  {
+    if(!estaEnMovimiento && juegoIniciado)
+    {
+      intervalo = setInterval(function(){mover(pelota)}, intervaloCalculado);
+      estaEnMovimiento= true;
+      playAudio(audioFondo);
+    }
+    else
+    {
+      pauseAudio(audioFondo);
+      clearInterval(intervalo);
+      estaEnMovimiento = false;
+    }
+  }
+}
+
+function mover(p)
+{
+
+  if(ladrillos.length == 0)
+  {
+    nivelActual++;
+    pintarNivel(nivelActual);
+  }
+  pelota = p;
+  y = parseInt(pelota.style.top);
+  x = parseInt(pelota.style.left);
+
+  //Comprueba si hay colision con las paredes y cambia la direccion de la bola
+  comprobarColisionParedes(x, y);
+
+  //comprobar choque con la base
+  comprobarColisionElemento(base);
+
+  //Comprobar si choca con ladrillos
+  for( var i = 0; i< ladrillos.length; i++)
+  {
+    comprobarColisionElemento(ladrillos[i]);
+  }
+
+  
+  if (arribaY)
+  {
+    spdireccionY.innerHTML = "arriba";
+    pelota.style.top = (y - pasoYPelota) + "px";
+  }
+  else
+  {
+    spdireccionY.innerHTML = "abajo";
+    pelota.style.top = (y + pasoYPelota) + "px";
+  }
+
+  if (derechaX)
+  {
+    spdireccionX.innerHTML = "derecha";
+    pelota.style.left = (x + pasoXPelota) + "px";
+  }
+  else
+  {
+    spdireccionX.innerHTML = "izquierda";
+    pelota.style.left = (x - pasoXPelota) + "px";
+  }
+
+  //Solo podemos mover la base una vez iniciado el juego y si no esta en pause
+  if( !juegoIniciado &&!estaEnMovimiento)
+    {
+      ponerEncimaCentroBase(pelota);
+    }
+}
+
+function comprobarColisionParedes(x, y)
+{
+  //Choca arriba
+  if (y <= 0 )
+  {
+    //pintarColision(x, y, "#15ff00");
+    arribaY = false;
+  }
+  //Si choca en la parte de abajo de la pantalla, vida-- o fin de juego
+  else if (y  >= (altoCajaJuego - anchoLargoBola))
+  {
+    cambiarFondoJuego("#ff0000");
+    setTimeout(function()
+    {
+      cambiarFondoJuego("#000000")
+    }
+    ,200
+    )
+    if(vidas < 1)
+    {
+      pauseAudio(audioFondo);
+      playAudio(audioFin);
+      alert("Has perdido... puntuacion total: " + puntuacion);
+      nivelActual = 0;
+      pintarNivel(nivelActual);
+    }
+    else
+    {
+      playAudio(perderVida);
+      vidas--;
+      spVidas.innerHTML = vidas;
+    }
+    //pintarColision(x, y + anchoLargoBola, "#15ff00");
+    arribaY = !arribaY;
+  }
+  //Choca derecha
+  if (x >= (anchoCajaJuego - anchoLargoBola))
+  {
+    pintarColision(x + anchoLargoBola, y, "#15ff00");
+    derechaX = !derechaX;
+  }
+  //Choca izquierda
+  else if (x <= 0 )
+  {
+    pintarColision(x, y, "#15ff00");
+    derechaX = !derechaX;
+  } 
+}
+
+//Funcion que suma o resta el paso de la x, con un tope maximo
+function modificarPasoX(numero)
+  {
+    maximo_paso = 4;
+    if(pasoXPelota + numero > maximo_paso)
+    {
+      pasoXPelota = maximo_paso;
+    }
+    else if(pasoXPelota + numero < 1)
+    {
+      pasoXPelota = 1;
+    }
+    else{
+      pasoXPelota += numero;
+    }
+  }
+
+function comprobarColisionElemento(elementoActual)
+{
+  //Variables que usa la funcion:
+
+  var anchoElemento;
+  var altoElemento;
+  //Variables en funcion de lo que se comprueba
+  if(elementoActual.className == "ladrillo")
+  {
+    anchoElemento = anchoLadrillo;
+    altoElemento  = altoLadrillo;
+  }
+  else if(elementoActual.className == "base")
+  {
+    anchoElemento = anchobase;
+    altoElemento  = altobase;
+  }
+
+  //Variables elemento con el que colisiona la pelota
+  var x = parseInt(elementoActual.style.left);
+  var y = parseInt(elementoActual.style.top); 
+  var xDerecha = x + anchoElemento;
+  var yAbajo = y + altoElemento;
+
+  //Variables de la pelota
+  var pelotaX = parseInt(pelota.style.left);
+  var pelotaY = parseInt(pelota.style.top);
+  var pelotaXderecha = pelotaX + anchoLargoBola;
+  var pelotaYAbajo = pelotaY + anchoLargoBola;
+
+
+  var cenXBola = pelotaX + (anchoLargoBola/2);
+  var cenYBola = pelotaY + (anchoLargoBola/2);
+
+
+  //Comprueba la colision en la parte superior e inferior
+  for(var i = x + 2; i< x + anchoElemento -2; i+=5)
+  {
+    distanciaBolaElemento = Math.hypot(cenXBola - i, cenYBola - y - altoElemento);
+    
+    //Si colisiona en la parte inferior del ladrillo
+    if(distanciaBolaElemento < radioBola && arribaY)
+    { 
+      if(elementoActual.className == "ladrillo")
+      {
+        borrarElemento(elementoActual)
+      }
+      arribaY = false;
+      break;
+    }
+    //Si colisiona en la parte superior
+    distanciaBolaElemento = Math.hypot(cenXBola - i, cenYBola - y);
+    if(distanciaBolaElemento < radioBola && !arribaY)
+    { 
+      if(elementoActual.className == "ladrillo")
+      {
+        borrarElemento(elementoActual);
+      }
+      else if(elementoActual.className = "base")
+      {
+        // division de la base
+        var paso = 0;
+          // Entre 0 - 10%
+          if(i >= y && i <= y + (anchobase)/10)
+          {
+            paso = 2;
+          }
+          //Entre el 10 y el 40
+          else if(i > x + ((anchobase)/10)*2 && i < x + ((anchobase)/10)*4)
+          {
+            paso = 1;
+          }
+          //Entre el 40 al 60
+          else if(i > x + ((anchobase)/10)*4 && i < x + ((anchobase)/10)*6)
+          {
+            paso = -1;
+          }
+          //entre 70 y 90
+          else if(i > x + ((anchobase)/10)*6 && i < x + ((anchobase)/10)*9)
+          {
+            paso = 1;
+          }
+          //entre 90 y 100
+          else
+          {
+            paso = 2;
+          }
+          modificarPasoX(paso);
+          //pelota.style.top = y - 1 + "px";
+          arribaY = true;
+
+          //Modifica el intervalo en funcion del paso y la velocidad
+          intervaloCalculado = parseInt((Math.sqrt(Math.pow(pasoXPelota, 2) + Math.pow(pasoYPelota, 2))) * 3);
+          actualizarIntervalo(intervaloCalculado);
+          break;
+      }
+      arribaY = !arribaY;
+      break;
+    }
+  }
+
+  //Comprobar choques laterales
+  for(var i = y; i< yAbajo; i+=3)
+  {
+    
+    //Si choca en la izquierda
+    distanciaBolaElemento = Math.hypot(cenXBola - x, cenYBola - i);
+    if(distanciaBolaElemento < radioBola)
+    { 
+      if(elementoActual.className == "ladrillo")
+      {
+        borrarElemento(elementoActual);
+      }
+      else if(elementoActual.className == "base")
+      {
+        pintarColision(x, i, "#ff0000");
+        arribaY = true;
+        
+      }
+      //Corregir posicion
+      //pelotaX = x -1 + "px";
+      //pelotaX = y +1 + "px";
+      derechaX = !derechaX;
+      
+      break;
+    }
+
+    //Si colisiona en la parte derecha
+    distanciaBolaElemento = Math.hypot(cenXBola - x - anchoElemento, cenYBola - i);
+    if(distanciaBolaElemento < radioBola)
+    { 
+      if(elementoActual.className == "ladrillo")
+      {
+        borrarElemento(elementoActual);
+      }
+      else if(elementoActual.className == "base")
+      {
+        pintarColision(x + anchoElemento , i, "#ff0000");
+        arribaY = true;
+      }
+      //Corregir posicion
+      //pelotaX = xDerecha + 1 + "px";
+      derechaX = !derechaX;
+      break;
+    }
+  }
+}
+
+function borrarElemento(elemento)
+{
+  if(elemento.parentNode != null)
+  {
+    if(elemento.className == "ladrillo")
+    {
+      elemento.vida = elemento.vida - 1;
+      if(elemento.vida >= 0)
+      {
+        actualizarPuntuacion(5);
+        elemento.style.backgroundColor = (colores[elemento.vida]);
+      }
+      else
+      {
+        actualizarPuntuacion(10);
+        elemento.parentNode.removeChild(elemento);
+      }
+    }
+    else if(elemento.className == "colision")
+    {
+      elemento.parentNode.removeChild(elemento);
+    }
+  }
+}
+
+function actualizarPuntuacion(suma)
+{
+  puntuacion += suma;
+  spPuntuacion.innerHTML = puntuacion;
+}
+
+function comprobarClick(elEvento)
+{
+  /*var evento = window.event || elEvento;
+  var coordenadaX = evento.clientX;
+  var coordenadaY = evento.clientY;
+  spratonX.innerHTML = coordenadaX;
+  spratonY.innerHTML = coordenadaY;
+
+  xPelota = parseInt(pelota.style.left) + anchoLargoBola;
+  if (coordenadaX >= xPelota)
+  {
+
+    clearInterval(intervalo);
+    setTimeout(function(){
+      contenedorPelota.style.opacity = 0.5;
+    }, 0);
+    setTimeout(function(){
+      contenedorPelota.style.opacity = 1;
+    }, 300);
+  }*/
+}
+function crearBase()
+  {
+    base = document.createElement("div");
+    base.style.backgroundColor = "green";
+    base.style.width = anchobase + "px";
+    base.style.height = altobase + "px";
+    base.style.position = "absolute";
+    base.className = "base";
+    base.style.left = (anchoCajaJuego / 2) - (anchobase/2)  + "px";
+    base.style.top = altoCajaJuego - altobase - 30 + "px";
+    contenedorPelota.appendChild(base);
+    return base;
+  }
+
+  function comprobarRaton(elEvento)
+  {
+    var evento = window.event || elEvento;
+    var coordenadaX = evento.clientX;
+    var coordenadaY = evento.clientY;
+
+    spPosicionX.innerHTML = coordenadaX + " px";
+    spPosicionY.innerHTML = coordenadaY + " px";
+
+    if(estaEnMovimiento)
+    {
+      base.style.left = coordenadaX - (bordeCajas) - (anchobase / 2) + "px";
+      //Si se sale por la izquierda
+      if( (parseInt(base.style.left) <= (-anchobase/2) + anchoLargoBola / 2))
+      {
+        base.style.left = -anchobase/2 + anchoLargoBola/2 + "px";
+      }
+      //Si se sale por la derecha
+      else if( (parseInt(base.style.left) + anchobase + (anchoLargoBola / 2) >= anchoCajaJuego + anchobase/2))
+      {
+        base.style.left = anchoCajaJuego - anchobase/2 - (anchoLargoBola/2) + "px";
+      }
+    }
+    
+
+    if( !juegoIniciado )
+    {
+      ponerEncimaCentroBase(pelota);
+    }
+  }
+
+  function pintarColision(x, y, color)
+  {
+    var colision = document.createElement("div");
+    colision.style.backgroundColor = color;
+    colision.style.width = 1 + "px";
+    colision.style.height = 1 + "px";
+    colision.style.position = "absolute";
+    colision.className = "colision";
+    colision.style.left = x + "px";
+    colision.style.top = y + "px";
+    contenedorPelota.appendChild(colision);
+
+    setTimeout(function()
+    {
+      borrarElemento(colision)
+    }
+      , 1000);
+  }
+
+  function ponerEncimaCentroBase(p)
+  {
+    p.style.top = parseInt(base.style.top) - anchoLargoBola + "px";
+	  p.style.left = parseInt(base.style.left) + (anchobase/ 2) - (anchoLargoBola/2) + "px";
+  }
+
+  function cambiarFondoJuego(color)
+  {
+    contenedorPelota.style.backgroundColor = color;
+  }
+
+  function borrarLadrillos()
+  {
+    //Actualizamos el array de ladrillos que queda.
+    ladrillos = document.getElementsByClassName("ladrillo");
+    while(ladrillos.length>0) 
+    {
+      ladrillos[0].parentNode.removeChild(ladrillos[0]);
+    }
+    
+
+  }
+
+
+  //Funcion para parar / iniciar el sonido
+  function playAudio(sonido) { 
+    sonido.play(); 
+  } 
+
+  function pauseAudio(sonido) { 
+      sonido.pause(); 
+  } 
+
+  function actualizarIntervalo(nuevoIntervalo)
+  {
+    clearInterval(intervalo);
+    intervalo = setInterval(function()
+    {
+      mover(pelota)
+    }
+    , nuevoIntervalo);
+  }
+</script>
+
+
+</html>
