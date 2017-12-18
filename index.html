@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Arkanoid</title>
+
+<noscript>Lo siento es necesario un navegador con javascript para poder ejecutar todo el contenido</noscript>
+<style>
+  html
+  {
+  overflow:hidden;
+  }
+  body
+  {
+    overflow:hidden;
+    margin:auto;
+    overflow-x:hidden;
+    overflow-y:hidden;
+  }
+
+</style>
+
+</head>
+<body>
+    <button type="button" onclick="jugar()" >Jugar</button>
+</body>
+
+<script type="text/javascript">
+
+window.onload = function()
+{
+  jugar();
+}
+
+function jugar()
+{
+  bordesElemento = 15 ;
+  altoPantalla = 700 + (bordesElemento * 2);
+  anchoPantalla = 900 + (bordesElemento * 4);
+
+  centroAltoPantalla = (screen.height - altoPantalla)  / 2 ;
+  centroAnchoPantalla = (screen.width - anchoPantalla) / 2;
+
+  console.log("alto/ancho de pantalla:  " +screen.height + " . " + screen.width);
+  console.log("calculadas: " +centroAltoPantalla + " . " + centroAnchoPantalla);
+  
+  posicionCentrada = "left=" + centroAnchoPantalla + ", top="+ centroAltoPantalla+ ","; 
+  //posicionCentrada = "left=" + 830 + ", top="+ 420+ ","; 
+
+  altoAncho = "height=" +altoPantalla+ ", width=" +anchoPantalla+ ",";
+  opcionesVenta =  altoAncho + posicionCentrada +"location=no,menubar=no,resizable=yes,scrollbars=no,status=no,titlebar=no";
+  miVentana = window.open( "Arkanoid.html", "ventana1", opcionesVenta );
+
+}
+
+</script>
+
+
+</html>
